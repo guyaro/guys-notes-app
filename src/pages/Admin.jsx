@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { getCourses, createCourse, updateCourse, deleteCourse } from "@/api/courses"
-import { getNotesByCourse, createNote, updateNote, deleteNote, reorderNotes } from "@/api/notes"
+import { getNotesByCourse, getStandaloneNotes, createNote, updateNote, deleteNote, reorderNotes } from "@/api/notes"
 import { CourseForm } from "@/components/CourseForm"
 import { NoteUploadForm } from "@/components/NoteUploadForm"
 import { NoteEditForm } from "@/components/NoteEditForm"
@@ -13,7 +13,7 @@ import { useAuth } from "@/lib/auth"
 import { formatDate, formatFileSize } from "@/lib/utils"
 import {
   Plus, Pencil, Trash2, Upload, LogOut, SquarePen,
-  ChevronDown, ChevronRight, GripVertical,
+  ChevronDown, ChevronRight, GripVertical, FileText,
 } from "lucide-react"
 import {
   DndContext,
@@ -92,10 +92,12 @@ export default function Admin() {
   const toast = useToast()
   const [courses, setCourses] = useState([])
   const [notes, setNotes] = useState({})
+  const [standaloneNotes, setStandaloneNotes] = useState([])
   const [loading, setLoading] = useState(true)
   const [courseFormOpen, setCourseFormOpen] = useState(false)
   const [editingCourse, setEditingCourse] = useState(null)
   const [uploadCourseId, setUploadCourseId] = useState(null)
+  const [uploadStandalone, setUploadStandalone] = useState(false)
   const [editingNote, setEditingNote] = useState(null)
   const [expanded, setExpanded] = useState({})
   const [activeSemester, setActiveSemester] = useState("all")
@@ -109,8 +111,12 @@ export default function Admin() {
 
   const loadData = async () => {
     try {
-      const coursesData = await getCourses()
+      const [coursesData, standaloneData] = await Promise.all([
+        getCourses(),
+        getStandaloneNotes(),
+      ])
       setCourses(coursesData)
+      setStandaloneNotes(standaloneData)
       const notesMap = {}
       await Promise.all(
         coursesData.map(async (c) => {
@@ -202,6 +208,21 @@ export default function Admin() {
     const { active, over } = event
     if (!over || active.id === over.id) return
 
+    if (courseId === null) {
+      // Standalone notes reorder
+      const oldIndex = standaloneNotes.findIndex((n) => n.id === active.id)
+      const newIndex = standaloneNotes.findIndex((n) => n.id === over.id)
+      const reordered = arrayMove(standaloneNotes, oldIndex, newIndex)
+      setStandaloneNotes(reordered)
+      try {
+        await reorderNotes(reordered.map((n) => n.id))
+      } catch (err) {
+        toast({ title: "Error reordering", description: err.message, variant: "destructive" })
+        loadData()
+      }
+      return
+    }
+
     const typeNotes = (notes[courseId] || []).filter((n) => n.type === type)
     const oldIndex = typeNotes.findIndex((n) => n.id === active.id)
     const newIndex = typeNotes.findIndex((n) => n.id === over.id)
@@ -272,7 +293,44 @@ export default function Admin() {
           <Plus className="h-4 w-4" />
           Add Course
         </Button>
+        <Button variant="outline" onClick={() => setUploadStandalone(true)}>
+          <Upload className="h-4 w-4" />
+          Upload General Notes
+        </Button>
       </div>
+
+      {/* Standalone Notes Section */}
+      {standaloneNotes.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader className="pb-0 pt-4 px-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-base">General Notes</CardTitle>
+              <Badge variant="secondary">{standaloneNotes.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-3 px-4 pb-4">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={(event) => handleDragEnd(null, "general", event)}
+            >
+              <SortableContext items={standaloneNotes.map((n) => n.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-1">
+                  {standaloneNotes.map((note) => (
+                    <SortableNoteRow
+                      key={note.id}
+                      note={note}
+                      onEdit={setEditingNote}
+                      onDelete={handleDeleteNote}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </CardContent>
+        </Card>
+      )}
 
       {(() => {
         const semesters = [...new Set(courses.map((c) => c.semester))].sort()
@@ -403,6 +461,16 @@ export default function Admin() {
           onOpenChange={(open) => !open && setUploadCourseId(null)}
           onSubmit={handleUploadNote}
           courseId={uploadCourseId}
+        />
+      )}
+
+      {uploadStandalone && (
+        <NoteUploadForm
+          open={true}
+          onOpenChange={(open) => !open && setUploadStandalone(false)}
+          onSubmit={handleUploadNote}
+          courseId={null}
+          standalone
         />
       )}
 

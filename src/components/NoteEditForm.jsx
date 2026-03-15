@@ -22,7 +22,8 @@ import { formatFileSize } from "@/lib/utils"
 export function NoteEditForm({ open, onOpenChange, onSubmit, note, courses }) {
   const [title, setTitle] = useState(note?.title ?? "")
   const [type, setType] = useState(note?.type ?? "lecture")
-  const [courseId, setCourseId] = useState(note?.course_id ?? "")
+  const [courseId, setCourseId] = useState(note?.course_id ?? "standalone")
+  const [description, setDescription] = useState(note?.description ?? "")
   const [file, setFile] = useState(null)
   const [loading, setLoading] = useState(false)
   const fileInputRef = useRef(null)
@@ -31,7 +32,8 @@ export function NoteEditForm({ open, onOpenChange, onSubmit, note, courses }) {
     e.preventDefault()
     setLoading(true)
     try {
-      await onSubmit({ title, type, courseId, file })
+      const resolvedCourseId = courseId === "standalone" ? null : courseId
+      await onSubmit({ title, type: resolvedCourseId ? type : "general", courseId: resolvedCourseId, file, description })
       onOpenChange(false)
     } finally {
       setLoading(false)
@@ -53,6 +55,7 @@ export function NoteEditForm({ open, onOpenChange, onSubmit, note, courses }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="standalone">Standalone (no course)</SelectItem>
                 {courses.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
@@ -69,32 +72,44 @@ export function NoteEditForm({ open, onOpenChange, onSubmit, note, courses }) {
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label>Type</Label>
-            <div className="flex rounded-md border text-sm overflow-hidden w-fit">
-              <button
-                type="button"
-                onClick={() => setType("lecture")}
-                className={`px-4 py-2 transition-colors cursor-pointer ${
-                  type === "lecture"
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted"
-                }`}
-              >
-                Lecture
-              </button>
-              <button
-                type="button"
-                onClick={() => setType("tutorial")}
-                className={`px-4 py-2 transition-colors cursor-pointer ${
-                  type === "tutorial"
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted"
-                }`}
-              >
-                Tutorial
-              </button>
+          {courseId !== "standalone" && (
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <div className="flex rounded-md border text-sm overflow-hidden w-fit">
+                <button
+                  type="button"
+                  onClick={() => setType("lecture")}
+                  className={`px-4 py-2 transition-colors cursor-pointer ${
+                    type === "lecture"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  Lecture
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setType("tutorial")}
+                  className={`px-4 py-2 transition-colors cursor-pointer ${
+                    type === "tutorial"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  Tutorial
+                </button>
+              </div>
             </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="edit-description">Description</Label>
+            <Input
+              id="edit-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Optional remark"
+              dir="auto"
+            />
           </div>
           <div className="space-y-2">
             <Label>File</Label>
@@ -138,7 +153,7 @@ export function NoteEditForm({ open, onOpenChange, onSubmit, note, courses }) {
               }}
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading || !title.trim() || !courseId}>
+          <Button type="submit" className="w-full" disabled={loading || !title.trim()}>
             {loading ? "Saving..." : "Save Changes"}
           </Button>
         </form>

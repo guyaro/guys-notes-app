@@ -29,7 +29,7 @@ function stripExtension(filename) {
   return filename.replace(/\.pdf$/i, "")
 }
 
-function SortableFileRow({ f, onUpdate, onRemove }) {
+function SortableFileRow({ f, onUpdate, onRemove, standalone }) {
   const {
     attributes,
     listeners,
@@ -63,34 +63,44 @@ function SortableFileRow({ f, onUpdate, onRemove }) {
         <Input
           value={f.title}
           onChange={(e) => onUpdate(f.id, "title", e.target.value)}
+          placeholder="Title"
+          className="h-8 text-sm"
+          dir="auto"
+        />
+        <Input
+          value={f.description || ""}
+          onChange={(e) => onUpdate(f.id, "description", e.target.value)}
+          placeholder="Description (optional)"
           className="h-8 text-sm"
           dir="auto"
         />
         <div className="flex items-center gap-2">
-          <div className="flex rounded-md border text-sm overflow-hidden">
-            <button
-              type="button"
-              onClick={() => onUpdate(f.id, "type", "lecture")}
-              className={`px-3 py-1 transition-colors cursor-pointer ${
-                f.type === "lecture"
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
-              }`}
-            >
-              Lecture
-            </button>
-            <button
-              type="button"
-              onClick={() => onUpdate(f.id, "type", "tutorial")}
-              className={`px-3 py-1 transition-colors cursor-pointer ${
-                f.type === "tutorial"
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
-              }`}
-            >
-              Tutorial
-            </button>
-          </div>
+          {!standalone && (
+            <div className="flex rounded-md border text-sm overflow-hidden">
+              <button
+                type="button"
+                onClick={() => onUpdate(f.id, "type", "lecture")}
+                className={`px-3 py-1 transition-colors cursor-pointer ${
+                  f.type === "lecture"
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                }`}
+              >
+                Lecture
+              </button>
+              <button
+                type="button"
+                onClick={() => onUpdate(f.id, "type", "tutorial")}
+                className={`px-3 py-1 transition-colors cursor-pointer ${
+                  f.type === "tutorial"
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                }`}
+              >
+                Tutorial
+              </button>
+            </div>
+          )}
           <span className="text-xs text-muted-foreground">
             {formatFileSize(f.file.size)}
           </span>
@@ -106,7 +116,7 @@ function SortableFileRow({ f, onUpdate, onRemove }) {
   )
 }
 
-export function NoteUploadForm({ open, onOpenChange, onSubmit, courseId }) {
+export function NoteUploadForm({ open, onOpenChange, onSubmit, courseId, standalone }) {
   const [files, setFiles] = useState([])
   const [loading, setLoading] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -125,7 +135,7 @@ export function NoteUploadForm({ open, onOpenChange, onSubmit, courseId }) {
       ...pdfFiles.map((f) => ({
         file: f,
         title: stripExtension(f.name),
-        type: "lecture",
+        type: standalone ? "general" : "lecture",
         id: Math.random().toString(36).slice(2),
       })),
     ])
@@ -178,6 +188,7 @@ export function NoteUploadForm({ open, onOpenChange, onSubmit, courseId }) {
           type: f.type,
           date: new Date().toISOString().split("T")[0],
           file: f.file,
+          description: f.description || "",
         })
       }
       onOpenChange(false)
@@ -198,7 +209,7 @@ export function NoteUploadForm({ open, onOpenChange, onSubmit, courseId }) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Upload Notes</DialogTitle>
+          <DialogTitle>{standalone ? "Upload General Notes" : "Upload Notes"}</DialogTitle>
           <DialogDescription>Drop PDF files or click to browse. Upload multiple at once.</DialogDescription>
         </DialogHeader>
 
@@ -245,6 +256,7 @@ export function NoteUploadForm({ open, onOpenChange, onSubmit, courseId }) {
                       f={f}
                       onUpdate={updateFile}
                       onRemove={removeFile}
+                      standalone={standalone}
                     />
                   ))}
                 </div>

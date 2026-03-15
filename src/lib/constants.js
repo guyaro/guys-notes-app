@@ -3,6 +3,7 @@ export const OWNER_EMAIL = "guy.aro.2001@gmail.com"
 export const NOTE_TYPES = [
   { value: "lecture", label: "Lecture" },
   { value: "tutorial", label: "Tutorial" },
+  { value: "general", label: "General" },
 ]
 
 export const SEMESTERS = [

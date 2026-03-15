@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react"
 import { getCourses } from "@/api/courses"
+import { getStandaloneNotes } from "@/api/notes"
 import { CourseCard } from "@/components/CourseCard"
-import { BookOpen } from "lucide-react"
+import { NoteRow } from "@/components/NoteRow"
+import { BookOpen, FileText } from "lucide-react"
 
 export default function Home() {
   const [courses, setCourses] = useState([])
+  const [standaloneNotes, setStandaloneNotes] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeSemester, setActiveSemester] = useState("all")
+  const [activeTab, setActiveTab] = useState("all")
 
   useEffect(() => {
-    getCourses()
-      .then(setCourses)
+    Promise.all([getCourses(), getStandaloneNotes()])
+      .then(([c, sn]) => {
+        setCourses(c)
+        setStandaloneNotes(sn)
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
@@ -23,7 +29,7 @@ export default function Home() {
     )
   }
 
-  if (courses.length === 0) {
+  if (courses.length === 0 && standaloneNotes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
         <BookOpen className="h-12 w-12 mb-4" />
@@ -34,20 +40,23 @@ export default function Home() {
   }
 
   const semesters = [...new Set(courses.map((c) => c.semester))].sort()
-  const filtered = activeSemester === "all"
+  const hasGeneralNotes = standaloneNotes.length > 0
+  const showTabs = semesters.length > 1 || hasGeneralNotes
+
+  const filteredCourses = activeTab === "all"
     ? courses
-    : courses.filter((c) => c.semester === activeSemester)
+    : courses.filter((c) => c.semester === activeTab)
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Courses</h1>
 
-      {semesters.length > 1 && (
-        <div className="flex gap-1 mb-6 rounded-lg bg-muted p-1 w-fit border">
+      {showTabs && (
+        <div className="flex flex-wrap gap-1 mb-6 rounded-lg bg-muted p-1 w-fit border">
           <button
-            onClick={() => setActiveSemester("all")}
+            onClick={() => setActiveTab("all")}
             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-              activeSemester === "all"
+              activeTab === "all"
                 ? "bg-background text-foreground shadow"
                 : "text-muted-foreground hover:text-foreground"
             }`}
@@ -57,9 +66,9 @@ export default function Home() {
           {semesters.map((sem) => (
             <button
               key={sem}
-              onClick={() => setActiveSemester(sem)}
+              onClick={() => setActiveTab(sem)}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-                activeSemester === sem
+                activeTab === sem
                   ? "bg-background text-foreground shadow"
                   : "text-muted-foreground hover:text-foreground"
               }`}
@@ -67,14 +76,34 @@ export default function Home() {
               {sem}
             </button>
           ))}
+          {hasGeneralNotes && (
+            <button
+              onClick={() => setActiveTab("general")}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                activeTab === "general"
+                  ? "bg-background text-foreground shadow"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              General
+            </button>
+          )}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((course) => (
-          <CourseCard key={course.id} course={course} />
-        ))}
-      </div>
+      {activeTab === "general" ? (
+        <div className="space-y-2">
+          {standaloneNotes.map((note) => (
+            <NoteRow key={note.id} note={note} />
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredCourses.map((course) => (
+            <CourseCard key={course.id} course={course} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

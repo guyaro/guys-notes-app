@@ -18,11 +18,12 @@ CREATE TABLE courses (
 -- Notes table
 CREATE TABLE notes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  course_id UUID REFERENCES courses(id) ON DELETE CASCADE NOT NULL,
+  course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  type TEXT CHECK (type IN ('lecture', 'tutorial')) NOT NULL,
+  type TEXT CHECK (type IN ('lecture', 'tutorial', 'general')) NOT NULL,
   date DATE NOT NULL,
   file_path TEXT NOT NULL,
+  description TEXT,
   file_size BIGINT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -43,6 +44,21 @@ CREATE POLICY "Owner can delete courses" ON courses FOR DELETE USING (is_owner()
 CREATE POLICY "Owner can insert notes" ON notes FOR INSERT WITH CHECK (is_owner());
 CREATE POLICY "Owner can update notes" ON notes FOR UPDATE USING (is_owner());
 CREATE POLICY "Owner can delete notes" ON notes FOR DELETE USING (is_owner());
+
+-- Comments table
+CREATE TABLE comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  note_id UUID REFERENCES notes(id) ON DELETE CASCADE NOT NULL,
+  author_name TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can read comments" ON comments FOR SELECT USING (true);
+CREATE POLICY "Anyone can insert comments" ON comments FOR INSERT WITH CHECK (true);
+CREATE POLICY "Owner can delete comments" ON comments FOR DELETE USING (is_owner());
 
 -- Storage: Create a 'notes' bucket (do this in the Supabase dashboard or via API)
 -- Then set these policies:

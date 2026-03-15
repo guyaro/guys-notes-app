@@ -18,19 +18,36 @@ export async function reorderNotes(orderedIds) {
   await Promise.all(updates)
 }
 
-export async function createNote({ courseId, title, type, date, file }) {
-  // Get max display_order for this course+type so new note goes to bottom
-  const { data: existing } = await supabase
+export async function getStandaloneNotes() {
+  const { data, error } = await supabase
+    .from("notes")
+    .select("*")
+    .is("course_id", null)
+    .order("display_order", { ascending: true })
+    .order("created_at", { ascending: true })
+  if (error) throw error
+  return data
+}
+
+export async function createNote({ courseId, title, type, date, file, description }) {
+  // Get max display_order for this group so new note goes to bottom
+  let query = supabase
     .from("notes")
     .select("display_order")
-    .eq("course_id", courseId)
     .eq("type", type)
     .order("display_order", { ascending: false })
     .limit(1)
+  if (courseId) {
+    query = query.eq("course_id", courseId)
+  } else {
+    query = query.is("course_id", null)
+  }
+  const { data: existing } = await query
   const nextOrder = (existing?.[0]?.display_order ?? -1) + 1
 
   const timestamp = Date.now()
-  const filePath = `${courseId}/${timestamp}_${file.name}`
+  const prefix = courseId || "standalone"
+  const filePath = `${prefix}/${timestamp}_${file.name}`
 
   const { error: uploadError } = await supabase.storage
     .from("notes")
@@ -40,10 +57,11 @@ export async function createNote({ courseId, title, type, date, file }) {
   const { data, error } = await supabase
     .from("notes")
     .insert({
-      course_id: courseId,
+      course_id: courseId || null,
       title,
       type,
       date,
+      description: description || null,
       file_path: filePath,
       file_size: file.size,
       display_order: nextOrder,
@@ -54,8 +72,8 @@ export async function createNote({ courseId, title, type, date, file }) {
   return data
 }
 
-export async function updateNote(note, { title, type, courseId, file }) {
-  const updates = { title, type, course_id: courseId }
+export async function updateNote(note, { title, type, courseId, file, description }) {
+  const updates = { title, type, course_id: courseId || null, description: description || null }
 
   if (file) {
     // Remove old file
@@ -63,7 +81,8 @@ export async function updateNote(note, { title, type, courseId, file }) {
 
     // Upload new file
     const timestamp = Date.now()
-    const filePath = `${courseId}/${timestamp}_${file.name}`
+    const prefix = courseId || "standalone"
+    const filePath = `${prefix}/${timestamp}_${file.name}`
     const { error: uploadError } = await supabase.storage
       .from("notes")
       .upload(filePath, file)

@@ -9,15 +9,24 @@ export function NoteRow({ note }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-3 py-3 px-3 rounded-lg border bg-card hover:bg-muted/60 transition-colors"
+      className="block rounded-lg border bg-card hover:bg-muted/60 transition-colors"
     >
-      <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="font-medium truncate" dir="auto">{note.title}</p>
-        <p className="text-xs text-muted-foreground">
-          Uploaded {formatDate(note.created_at)} &middot; {formatFileSize(note.file_size)}
-        </p>
+      <div className="flex items-center gap-3 py-3 px-3">
+        <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium truncate" dir="auto">{note.title}</p>
+          <p className="text-xs text-muted-foreground">
+            Uploaded {formatDate(note.created_at)} &middot; {formatFileSize(note.file_size)}
+          </p>
+        </div>
       </div>
+      {note.description && (
+        <div className="px-3 pb-3 pt-0">
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap" dir="auto">
+            {note.description}
+          </p>
+        </div>
+      )}
     </a>
   )
 }
