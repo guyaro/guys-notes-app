@@ -9,7 +9,7 @@ A notes sharing platform where Guy uploads class PDFs and classmates browse/down
 
 ## Key Files
 - `src/api/` — Supabase client, courses CRUD, notes CRUD + file upload
-- `src/pages/` — Home (public course grid), CoursePage (notes list), Admin (manage everything), Login
+- `src/pages/` — Home (course grid + General tab), CoursePage (notes list), Admin (manage everything), Login
 - `src/lib/auth.jsx` — AuthProvider with Google OAuth, owner check via email
 - `src/lib/constants.js` — Owner email, semesters, note types
 - `supabase-setup.sql` — Database schema, RLS policies, `is_owner()` function
@@ -28,5 +28,5 @@ A notes sharing platform where Guy uploads class PDFs and classmates browse/down
 - No dark mode (removed intentionally)
 - Hebrew text uses `dir="auto"` throughout
 - Notes have `display_order` column for manual ordering via drag-and-drop
-- Notes can be standalone (no course) — shown as "General Notes" on home page
+- Notes can be standalone (no course) — shown under "General" tab on home page
 - Notes have an optional `description` field (admin remark shown publicly)

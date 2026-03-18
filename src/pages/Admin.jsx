@@ -127,7 +127,7 @@ export default function Admin() {
       setExpanded((prev) => {
         const next = { ...prev }
         coursesData.forEach((c) => {
-          if (next[c.id] === undefined) next[c.id] = true
+          if (next[c.id] === undefined) next[c.id] = false
         })
         return next
       })
